@@ -4,6 +4,7 @@ import sys
 import glob
 import magic # lol
 import operator
+import time
 
 
 RED = "\033[1;31m"
@@ -27,14 +28,32 @@ Version: 0.0.1
 Author: nxkennedy
 """
 
+#@TODO what if a file is passed? Or a dir with only one file in it? Or no files?
+
+def check_for_bad():
+    pass
 
 def scan_file(target):
 
+    char = "="
+    print("\n[+] FILE ANALYSIS ")
+    print(char*60)
+    risk = ["[ PASS ]", "[ FAIL ]", "[ UNK ]"]
+    print(" {:<45} {:<12} ".format('File:','Result:'))
+    print(" {:<45} {:<12} ".format('-----','-------'))
+    for item in target:
+        print("-> Analyzing {0}...".format(item[0].split("/")[-1]), end="\r")
+        check_for_bad()
+        time.sleep(0.5)
+        sys.stdout.write(GREEN)
+        print("-> {:<43} {:<12}".format(item[0].split("/")[-1], risk[0]))
+        sys.stdout.write(RESET)
     pass
 
 
 def scan_dir(target):
     fcount = 0
+    files = []
     ftypes = []
     dangerous_ftypes = []
     repo = glob.glob('{0}/**'.format(target), recursive=True)
@@ -42,8 +61,9 @@ def scan_dir(target):
     for item in repo:
         if os.path.isfile(item): # if not a file, it's a subdirectory
             fcount += 1
-            breed = magic.from_file(item)
-            ftypes.append(breed) # find out what kind of file we're dealing with
+            breed = magic.from_file(item) # find out what kind of file we're dealing with
+            ftypes.append(breed)
+            files.append([item, breed])
 
             if "exe" in breed.lower():
                 dangerous_ftypes.append([item, breed])
@@ -62,6 +82,7 @@ def scan_dir(target):
         if len(t) > 40:
             t = t[:40] + "..."
         print("* {:<45} {:<12}".format(t, c))
+    time.sleep(1)
 
 
     if len(dangerous_ftypes) > 0:
@@ -71,20 +92,19 @@ def scan_dir(target):
         for thing in dangerous_ftypes:
             print("-> {0}\n* {1}\n".format(thing[0], thing[1]))
         sys.stdout.write(RESET)
+        time.sleep(1)
 
-
-    print("\n\n"+char*27 + " DONE "+ char*27 +"\n")
-
-    pass
+    scan_file(files)
 
 
 def get_target():
     try:
 
         target = sys.argv[1]
-        print("Analyzing {0}...".format(target))
+        print("Analyzing '{0}'...".format(target))
+        time.sleep(1)
         if os.path.isfile(target):
-            scan_file(target)
+            scan_file([target])
         elif os.path.isdir(target):
             scan_dir(target)
         else:
@@ -100,3 +120,5 @@ if __name__ == "__main__":
     print(banner +"_"*60 + "\n")
     sys.stdout.write(RESET)
     get_target()
+    char = "="
+    print("\n\n"+char*27 + " DONE "+ char*27 +"\n")
