@@ -5,12 +5,14 @@ from chardet.universaldetector import UniversalDetector
 # Search for ips
 def check_for_ips(string):
 
-    ip = re.compile('(([2][5][0-5]\.)|([2][0-4][0-9]\.)|([0-1]?[0-9]?[0-9]\.)){3}'
-                +'(([2][5][0-5])|([2][0-4][0-9])|([0-1]?[0-9]?[0-9]))')
+    ip = re.compile("\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}")
 
-    match = ip.search(string)
+    match = ip.findall(string)
+
     if match:
-        return "IP address found: {0} at position {1}".format(match.group(), match.span())
+        print(match)
+        #print("IP address found: {0} at position {1}".format(match.group(), match.span()))
+
 
 
 def check_encoding(string):

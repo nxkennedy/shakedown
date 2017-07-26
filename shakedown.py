@@ -33,20 +33,24 @@ Author: nxkennedy
 #@TODO what if a file is passed? Or a dir with only one file in it? Or no files?
 
 
+# for our output
 def bar():
     print("="*60)
 
 
-def check_for_bad(doc):
-
+#@TODO this is busted. Need to fix encoding check and make it so that the line number prints with all of the check findings. Also need to add way for findings to be quantified
+def integrity_check(doc):
     with open(doc) as f:
-        for line in f:
+        for line_number, line in enumerate(f, 1):
             try:
                 encoding = checks.check_encoding(line)
+
                 if encoding:
                     print("[!] {0}: Line Encoded in {1}".format(doc, encoding['encoding']))
                     continue
+
                 checks.check_for_ips(line)
+
             except Exception as e:
                 print("EXCEPTION: " + str(e))
                 continue
@@ -106,7 +110,7 @@ def analyzer(files):
         else:
             print("-> Analyzing {0}...".format(f), end="\r")
 
-        check_for_bad(f)
+        integrity_check(f)
         time.sleep(0.5)
 
         sys.stdout.write(GREEN)
