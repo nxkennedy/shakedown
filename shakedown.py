@@ -5,6 +5,8 @@ import glob
 import magic # lol
 import operator
 import time
+import checks # ours
+import codecs
 
 
 RED = "\033[1;31m"
@@ -30,86 +32,142 @@ Author: nxkennedy
 
 #@TODO what if a file is passed? Or a dir with only one file in it? Or no files?
 
-def check_for_bad():
-    pass
 
-def scan_file(target):
-
-    char = "="
-    print("\n[+] FILE ANALYSIS ")
-    print(char*60)
-    risk = ["[ PASS ]", "[ FAIL ]", "[ UNK ]"]
-    print(" {:<45} {:<12} ".format('File:','Result:'))
-    print(" {:<45} {:<12} ".format('-----','-------'))
-    for item in target:
-        print("-> Analyzing {0}...".format(item[0].split("/")[-1]), end="\r")
-        check_for_bad()
-        time.sleep(0.5)
-        sys.stdout.write(GREEN)
-        print("-> {:<43} {:<12}".format(item[0].split("/")[-1], risk[0]))
-        sys.stdout.write(RESET)
-    pass
+def bar():
+    print("="*60)
 
 
-def scan_dir(target):
-    fcount = 0
-    files = []
+def check_for_bad(doc):
+
+    with open(doc) as f:
+        for line in f:
+            try:
+                encoding = checks.check_encoding(line)
+                if encoding:
+                    print("[!] {0}: Line Encoded in {1}".format(doc, encoding['encoding']))
+                    continue
+                checks.check_for_ips(line)
+            except Exception as e:
+                print("EXCEPTION: " + str(e))
+                continue
+
+
+
+def analyzer(files):
     ftypes = []
     dangerous_ftypes = []
-    repo = glob.glob('{0}/**'.format(target), recursive=True)
 
-    for item in repo:
-        if os.path.isfile(item): # if not a file, it's a subdirectory
-            fcount += 1
-            breed = magic.from_file(item) # find out what kind of file we're dealing with
-            ftypes.append(breed)
-            files.append([item, breed])
+    if len(files) < 2:
+        print("\n[+] INITIAL STATS FOR '{0}'".format(files[0]))
+        bar()
 
-            if "exe" in breed.lower():
-                dangerous_ftypes.append([item, breed])
+    # initial process
+    for f in files:
 
-    ftypes_stats = Counter(ftypes) # dict of file types with occurence Counter
-    counter = sorted(ftypes_stats.items(), key=operator.itemgetter(1), reverse=True) # dumb
-    char = "="
-    print("\n[+] INITIAL FINDINGS ".format(target.upper()))
-    print(char*60)
+        ftype = magic.from_file(f) # find out what type of file we're dealing with
+        ftypes.append(ftype)
+        #files.append([item, breed])
 
-    print("-> Subdirectories Found: {0}\n-> Files to Analyze: {1}".format((len(repo) - 1 - fcount), (fcount)))
+        if "exe" in ftype.lower():
+            dangerous_ftypes.append([f, ftype])
+
+
+    ftypes_stats = sorted(Counter(ftypes).items(), key=operator.itemgetter(1), reverse=True) # dict of file types sorted by count in descending order
     print("-> Filetypes Discovered: {0}\n".format(len(ftypes_stats)))
     print(" {:<45} {:<12} ".format('Type:','Count:'))
     print(" {:<45} {:<12} ".format('-----','------'))
-    for t, c in counter:
+    for t, c in ftypes_stats:
         if len(t) > 40:
             t = t[:40] + "..."
         print("* {:<45} {:<12}".format(t, c))
     time.sleep(1)
 
-
     if len(dangerous_ftypes) > 0:
         sys.stdout.write(YELLOW)
-        print("\n\n[!] POTENTIALLY DANGEROUS FILE TYPES DETECTED ")
-        print(char*60)
-        for thing in dangerous_ftypes:
-            print("-> {0}\n* {1}\n".format(thing[0], thing[1]))
+        print("\n[!] POTENTIALLY DANGEROUS FILE TYPES DETECTED ")
+        bar()
+        for evil in dangerous_ftypes:
+            print("-> {0}\n* {1}\n".format(evil[0], evil[1]))
         sys.stdout.write(RESET)
         time.sleep(1)
 
-    scan_file(files)
+    # secondary process
+    print("\n[+] IN-DEPTH FILE INTEGRITY TESTING ")
+    bar()
+    risk = ["[ PASS ]", "[ FAIL ]", "[ UNK ]"]
+    print(" {:<45} {:<12} ".format('File:','Result:'))
+    print(" {:<45} {:<12} ".format('-----','-------'))
+    for f in files:
+
+        if "/" in f:
+            print("-> Analyzing {0}...".format(f.split("/")[-1]), end="\r")
+        elif "\\" in f:
+            print("-> Analyzing {0}...".format(f.split("\\")[-1]), end="\r")
+        else:
+            print("-> Analyzing {0}...".format(f), end="\r")
+
+        check_for_bad(f)
+        time.sleep(0.5)
+
+        sys.stdout.write(GREEN)
+        if "/" in f:
+            print("-> {:<43} {:<12}".format(f.split("/")[-1], risk[0]))
+        elif "\\" in f:
+            print("-> {:<43} {:<12}".format(f.split("\\")[-1], risk[0]))
+        else:
+            print("-> Analyzing {0}...".format(f), end="\r")
+            print("-> {:<43} {:<12}".format(f, risk[0]))
+        sys.stdout.write(RESET)
+
+
+def process_dir(directory):
+    fcount = 0
+    files = []
+    folder = glob.glob('{0}/**'.format(directory), recursive=True)
+    for item in folder:
+
+        if os.path.isfile(item): # if not a file, it's a subdirectory
+            files.append(item)
+            fcount += 1
+
+    print("\n[+] DIRECTORY STATS FOR '{0}'".format(directory))
+    bar()
+    print("-> Subdirectories Found: {0}\n-> Files to Analyze: {1}".format((len(folder) - 1 - fcount), (fcount)))
+
+    analyzer(files)
 
 
 def get_target():
+
     try:
 
-        target = sys.argv[1]
-        print("Analyzing '{0}'...".format(target))
-        time.sleep(1)
-        if os.path.isfile(target):
-            scan_file([target])
-        elif os.path.isdir(target):
-            scan_dir(target)
+        if len(sys.argv) > 2:
+            print("\n[!] ERROR: TOO MANY ARGS. PLEASE ENTER MULTIPLE FILES/DIRS AS A COMMA SEPARATED STRING\n")
+        elif len(sys.argv) == 2:
+
+            if "," in sys.argv[1]:
+                targets = sys.argv[1].split(",")
+            else:
+                targets = [sys.argv[1]]
+
         else:
-            print('\n[!] ERROR: "{0}" not found')
-            exit(0)
+            print("\n[!] ERROR: MISSING MINIMUM REQUIREMENT OF ARGS\n")
+            #print(USAGE)
+
+        #print("Analyzing '{0}'...".format(target))
+        #time.sleep(1)
+
+        for target in targets:
+            if os.path.isfile(target):
+                analyzer(target) #straight to the analyzer
+            elif os.path.isdir(target):
+                process_dir(target)
+            else:
+                print('\n[!] ERROR: "{0}" not found')
+
+
+    except IndexError as e:
+        print("\n[!] ERROR: THE DIRECTORY SPECIFIED IS EMPTY\n")
 
     except Exception as e:
         print("\n[!] ERROR {0}\n".format(e))
