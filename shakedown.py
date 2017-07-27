@@ -9,14 +9,7 @@ import checks # ours
 import codecs
 
 
-RED = "\033[1;31m"
-YELLOW = "\033[1;33m"
-BLUE = "\033[1;34m"
-CYAN = "\033[1;36m"
-GREEN = "\033[0;32m"
-RESET = "\033[0;0m"
-BOLD = "\033[;1m"
-REVERSE = "\033[;7m"
+
 
 banner = """
    ______        __          __
@@ -37,31 +30,103 @@ Author: nxkennedy
 def bar():
     print("="*60)
 
+# colors to choose from
+RED = "\033[1;31m"
+YELLOW = "\033[1;33m"
+BLUE = "\033[1;34m"
+CYAN = "\033[1;36m"
+GREEN = "\033[0;32m"
+RESET = "\033[0;0m"
+BOLD = "\033[;1m"
+REVERSE = "\033[;7m"
+
+def write_color(color, string, r=False):
+    sys.stdout.write(color)
+    if r:
+        print(string, end="\r")
+    else:
+        print(string)
+    sys.stdout.write(RESET)
 
 #@TODO this is busted. Need to fix encoding check and make it so that the line number prints with all of the check findings. Also need to add way for findings to be quantified
 def integrity_check(doc):
-    with open(doc) as f:
+    write_color(CYAN, "ANALYZING {0}...".format(doc))
+    print("---")
+
+    try:
+        with open(doc) as f:
+            fail = 0 # start our fail counter
+
+
+            ### shell code loop
+            write_color(YELLOW, "{:<43} {:<12}".format("[*] Looking for shellcode...", "[ IN PROGRESS ]"), r=True)
+            time.sleep(2)
+            sc_flag = 0
+            for line_number, line in enumerate(f, 1):
+
+                shell_code = checks.check_for_shellcode(line)
+                if shell_code:
+                    if sc_flag < 1:
+                        write_color(RED, "{:<46} {:<17}".format("[!] POSSIBLE SHELLCODE FOUND", "[ FAIL ]"), r=False)
+                    write_color(BLUE, "-> LINE: {0}\n-> CONTENT: {1}".format(line_number, line))
+                    sc_flag += 1
+                    time.sleep(0.25)
+
+
+            f.seek(0) # back to the top of the file
+            #if sc_flag
+
+            ### ip loop
+            write_color(YELLOW, "{:<43} {:<12}".format("[*] Looking for IPs...", "[ IN PROGRESS ]"), r=True)
+            time.sleep(2)
+            ip_flag = 0
+            for line_number, line in enumerate(f, 1):
+                ip = checks.check_for_ips(line)
+                if ip:
+
+                    if ip_flag < 1:
+                        write_color(RED, "{:<46} {:<17}".format("[!] POSSIBLE IP ADDRESS FOUND", "[ FAIL ]"), r=False)
+
+                    write_color(BLUE, "-> LINE: {0}\n-> CONTENT: {1}".format(line_number, line))
+                    ip_flag += 1
+                    time.sleep(0.25)
+                    """
+                    number_of_ips = len(ip)
+                    ip = (', ').join(ip) # makes it a string instead of array
+                    if number_of_ips > 1:
+                        write_color(RED, "\n[!] {0} IP ADDRESSES FOUND \n-> {1}\n-> FILE: {2}\n-> LINE: {3}\n-> CONTENT: {4}".format(number_of_ips, ip, doc, line_number, line))
+                    else:
+                        write_color(RED, "\n[!] IP ADDRESS FOUND \n-> {0}\n-> FILE: {1}\n-> LINE: {2}\n-> CONTENT: {3}".format(ip, doc, line_number, line))
+                    """
+
+            print("\n") # Gives us some room
+    except Exception as e:
+        print("EXCEPTION: " + str(e))
+
+
+        """
+        ### bad libs loop
         for line_number, line in enumerate(f, 1):
             try:
-                encoding = checks.check_encoding(line)
-
-                if encoding:
-                    print("[!] {0}: Line Encoded in {1}".format(doc, encoding['encoding']))
-                    continue
-
-                checks.check_for_ips(line)
+                ip = checks.check_for_ips(line)
+                if ip:
+                    number_of_ips = len(ip)
+                    ip = (', ').join(ip) # makes it a string instead of array
+                    if number_of_ips > 1:
+                        write_color(RED, "\n[!] {0} IP ADDRESSES FOUND \n-> {1}\n-> FILE: {2}\n-> LINE: {3}\n-> CONTENT: {4}".format(number_of_ips, ip, doc, line_number, line))
+                    else:
+                        write_color(RED, "\n[!] IP ADDRESS FOUND \n-> {0}\n-> FILE: {1}\n-> LINE: {2}\n-> CONTENT: {3}".format(ip, doc, line_number, line))
 
             except Exception as e:
                 print("EXCEPTION: " + str(e))
                 continue
-
-
+            """
 
 def analyzer(files):
     ftypes = []
     dangerous_ftypes = []
 
-    if len(files) < 2:
+    if len(files) < 2: # means it's a directory
         print("\n[+] INITIAL STATS FOR '{0}'".format(files[0]))
         bar()
 
@@ -102,17 +167,22 @@ def analyzer(files):
     print(" {:<45} {:<12} ".format('File:','Result:'))
     print(" {:<45} {:<12} ".format('-----','-------'))
     for f in files:
+        # in case we're dealing with lin/win
 
+        """
         if "/" in f:
             print("-> Analyzing {0}...".format(f.split("/")[-1]), end="\r")
         elif "\\" in f:
             print("-> Analyzing {0}...".format(f.split("\\")[-1]), end="\r")
         else:
             print("-> Analyzing {0}...".format(f), end="\r")
-
+        """
+        # send the file to the grinder
         integrity_check(f)
         time.sleep(0.5)
-
+        """
+        # this means the check passed
+        #@TODO should print a color based on status of checks above
         sys.stdout.write(GREEN)
         if "/" in f:
             print("-> {:<43} {:<12}".format(f.split("/")[-1], risk[0]))
@@ -122,7 +192,7 @@ def analyzer(files):
             print("-> Analyzing {0}...".format(f), end="\r")
             print("-> {:<43} {:<12}".format(f, risk[0]))
         sys.stdout.write(RESET)
-
+        """
 
 def process_dir(directory):
     fcount = 0
@@ -178,9 +248,7 @@ def get_target():
 
 
 if __name__ == "__main__":
-    sys.stdout.write(CYAN)
-    print(banner +"_"*60 + "\n")
-    sys.stdout.write(RESET)
+    write_color(CYAN, banner +"_"*60 + "\n")
     get_target()
     char = "="
     print("\n\n"+char*27 + " DONE "+ char*27 +"\n")
