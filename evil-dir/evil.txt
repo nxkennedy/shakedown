@@ -6,6 +6,10 @@ foo@demo.net	bar.ba@test.co.uk
 www.demo.com	http://foo.co.uk/
 http://regexr.com/foo.html?q=bar
 https://mediatemple.net
-10.1.2.3
-10.1.2.3,255.255.3.1
-10.1.2.4:1234
+10.20.0.2
+68.7.1.254,10.20.0.2
+[255.255.255.255]
+shellcode_hex = "0x440x440x440x440x440x440x440x440x440x440x440x440x44"
+shellcode1 = "\x45\x45\x45\x45\x45\x45\x45\x45\x45\x45\x45\x45\x45\x45"
+shellcode2 = "%x00%x00%x00%x00%x00%x00%x00%x00%x00%x00%x00%x00%x00%x00"
+shellcode3 = "\\x50\\x50\\x50\\x50\\x50\\x50\\x50\\x50\\x50\\x50\\x50"

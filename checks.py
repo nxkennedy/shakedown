@@ -1,6 +1,4 @@
 import re
-from chardet.universaldetector import UniversalDetector
-
 
 # Search for ips
 def check_for_ips(string):
@@ -10,17 +8,15 @@ def check_for_ips(string):
     match = ip.findall(string)
 
     if match:
-        print(match)
+        return match
         #print("IP address found: {0} at position {1}".format(match.group(), match.span()))
 
 
+# check for possible shellcode strings
+def check_for_shellcode(string):
 
-def check_encoding(string):
-    detector = UniversalDetector()
-    detector.reset()
-    try:
-        detector.feed(string)
-        detector.close()
-        return detector.result()
-    except TypeError: # string not encoded throws an exception
-        return False
+    chars = re.compile(r"[0%\\][xX][0-9a-fA-F]+")
+    match = chars.search(string)
+
+    if match:
+        return match

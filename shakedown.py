@@ -36,7 +36,7 @@ RED_DIM = "\033[2;31m"
 YELLOW = "\033[1;33m"
 BLUE = "\033[1;34m"
 CYAN = "\033[1;36m"
-GREEN = "\033[0;32m"
+GREEN = "\033[1;32m"
 RESET = "\033[0;0m"
 BOLD = "\033[;1m"
 REVERSE = "\033[;7m"
@@ -51,17 +51,13 @@ def write_color(color, string, r=False):
 
 #@TODO this is busted. Need to fix encoding check and make it so that the line number prints with all of the check findings. Also need to add way for findings to be quantified
 def integrity_check(doc):
-    write_color(CYAN, "==> Analyzing '{0}'...".format(doc))
-    print("---")
-
+    write_color(BOLD, "==> '{0}'".format(doc))
+    print("-" * (len(doc)+6))
     try:
         with open(doc) as f:
-            fail = 0 # start our fail counter
-
-
             #### shell code loop
             write_color(YELLOW, "{:<46} {:<17}".format("[*] Shellcode Check", "[ IN PROGRESS ]"), r=True)
-            time.sleep(2)
+            time.sleep(0.5)
             sc_flag = 0
             for line_number, line in enumerate(f, 1):
 
@@ -72,86 +68,68 @@ def integrity_check(doc):
                         write_color(RED, "{:<46} {:<17}".format("[-] Shellcode Check", "[ FAIL ]"), r=False)
                         write_color(RED, "{:<46} {:<17}".format("[!] POSSIBLE SHELLCODE FOUND", "[ SEE BELOW ]"), r=False)
 
-                    write_color(RED_DIM, "-> LINE: {0}\n-> CONTENT: {1}".format(line_number, line))
+                    print("-> LINE: {0}\n-> CONTENT: {1}".format(line_number, line))
                     sc_flag += 1
-                    time.sleep(0.25)
+
             if sc_flag == 0:
                 write_color(GREEN, "{:<46} {:<17}".format("[\u2714] Shellcode Check", "[ PASS ]"), r=False)
 
+
             f.seek(0) # back to the top of the file because we're about to reiterate over every loop
             #### ip loop
-            write_color(YELLOW, "{:<43} {:<12}".format("[*] IP Address Check", "[ IN PROGRESS ]"), r=True)
-            time.sleep(2)
+            write_color(YELLOW, "{:<46} {:<17}".format("[*] IP Address Check", "[ IN PROGRESS ]"), r=True)
+            time.sleep(0.5)
             ip_flag = 0
             for line_number, line in enumerate(f, 1):
                 ip = checks.check_for_ips(line)
                 if ip:
 
                     if ip_flag < 1:
-                        write_color(RED, "{:<46} {:<17}".format("[-] IP Address Check," "[ FAIL ]"), r=False)
+                        write_color(RED, "{:<46} {:<17}".format("[-] IP Address Check", "[ FAIL ]"), r=False)
                         write_color(RED, "{:<46} {:<17}".format("[!] POSSIBLE IP ADDRESS FOUND", "[ SEE BELOW ]"), r=False)
 
-                    write_color(RED_DIM, "-> LINE: {0}\n-> CONTENT: {1}".format(line_number, line))
+                    print("-> LINE: {0}\n-> CONTENT: {1}".format(line_number, line))
                     ip_flag += 1
-                    time.sleep(0.25)
+
             if ip_flag == 0:
                 write_color(GREEN, "{:<46} {:<17}".format("[\u2714] IP Address Check", "[ PASS ]"), r=False)
 
             print("\n") # Gives us some room
 
     except UnicodeDecodeError as e:
-        write_color(YELLOW, "\n[!] ERROR: Unable to read {0}".format(doc))
-        write_color(YELLOW, "({0})".format(e))
+        write_color(YELLOW, "{:<46} {:<17}".format("[!] ERROR: UNABLE TO READ FILE", "[ ERROR ]"))
+        write_color(YELLOW, "-> {0}\n\n".format(e))
 
     except Exception as e:
         print("EXCEPTION: " + str(e))
         pass
 
 
-        """
-        ### bad libs loop
-        for line_number, line in enumerate(f, 1):
-            try:
-                ip = checks.check_for_ips(line)
-                if ip:
-                    number_of_ips = len(ip)
-                    ip = (', ').join(ip) # makes it a string instead of array
-                    if number_of_ips > 1:
-                        write_color(RED, "\n[!] {0} IP ADDRESSES FOUND \n-> {1}\n-> FILE: {2}\n-> LINE: {3}\n-> CONTENT: {4}".format(number_of_ips, ip, doc, line_number, line))
-                    else:
-                        write_color(RED, "\n[!] IP ADDRESS FOUND \n-> {0}\n-> FILE: {1}\n-> LINE: {2}\n-> CONTENT: {3}".format(ip, doc, line_number, line))
-
-            except Exception as e:
-                print("EXCEPTION: " + str(e))
-                continue
-            """
-
 def analyzer(files):
     ftypes = []
     dangerous_ftypes = []
 
-    if len(files) < 2: # means it's a directory
+    if len(files) < 2: # it's a file
         print("\n[+] INITIAL STATS FOR '{0}'".format(files[0]))
         bar()
 
     # initial process
     for f in files:
-
         ftype = magic.from_file(f) # find out what type of file we're dealing with
         ftypes.append(ftype)
-        #files.append([item, breed])
 
         if "exe" in ftype.lower():
             dangerous_ftypes.append([f, ftype])
-
 
     ftypes_stats = sorted(Counter(ftypes).items(), key=operator.itemgetter(1), reverse=True) # dict of file types sorted by count in descending order
     print("-> Filetypes Discovered: {0}\n".format(len(ftypes_stats)))
     print(" {:<45} {:<12} ".format('Type:','Count:'))
     print(" {:<45} {:<12} ".format('-----','------'))
     for t, c in ftypes_stats:
+
         if len(t) > 40:
-            t = t[:40] + "..."
+            t = t[:40] + "..." # truncate output
+
         print("* {:<45} {:<12}".format(t, c))
     time.sleep(1)
 
@@ -167,37 +145,13 @@ def analyzer(files):
     # secondary process
     print("\n[+] IN-DEPTH FILE INTEGRITY TESTING ")
     bar()
-    risk = ["[ PASS ]", "[ FAIL ]", "[ UNK ]"]
     print(" {:<45} {:<12} ".format('Test:','Result:'))
     print(" {:<45} {:<12} ".format('-----','-------'))
     for f in files:
-        # in case we're dealing with lin/win
-
-        """
-        if "/" in f:
-            print("-> Analyzing {0}...".format(f.split("/")[-1]), end="\r")
-        elif "\\" in f:
-            print("-> Analyzing {0}...".format(f.split("\\")[-1]), end="\r")
-        else:
-            print("-> Analyzing {0}...".format(f), end="\r")
-        """
         # send the file to the grinder
         integrity_check(f)
-        time.sleep(0.25)
-        """
-        # this means the check passed
-        #@TODO should print a color based on status of checks above
-        sys.stdout.write(GREEN)
-        if "/" in f:
-            print("-> {:<43} {:<12}".format(f.split("/")[-1], risk[0]))
-        elif "\\" in f:
-            print("-> {:<43} {:<12}".format(f.split("\\")[-1], risk[0]))
-        else:
-            print("-> Analyzing {0}...".format(f), end="\r")
-            print("-> {:<43} {:<12}".format(f, risk[0]))
-        sys.stdout.write(RESET)
-        """
 
+# take our dir and extract the files from it
 def process_dir(directory):
     fcount = 0
     files = []
@@ -216,7 +170,6 @@ def process_dir(directory):
 
 
 def get_target():
-
     try:
 
         if len(sys.argv) > 2:
@@ -232,17 +185,14 @@ def get_target():
             print("\n[!] ERROR: MISSING MINIMUM REQUIREMENT OF ARGS\n")
             #print(USAGE)
 
-        #print("Analyzing '{0}'...".format(target))
-        #time.sleep(1)
-
         for target in targets:
+
             if os.path.isfile(target):
-                analyzer(target) #straight to the analyzer
+                analyzer([target]) # straight to the analyzer as an array
             elif os.path.isdir(target):
-                process_dir(target)
+                process_dir(target) # will be processed into an array
             else:
                 print('\n[!] ERROR: "{0}" not found')
-
 
     except IndexError as e:
         print("\n[!] ERROR: THE DIRECTORY SPECIFIED IS EMPTY\n")
@@ -256,4 +206,4 @@ if __name__ == "__main__":
     time.sleep(0.25)
     get_target()
     char = "="
-    print("\n\n"+char*27 + " DONE "+ char*27 +"\n")
+    write_color(BOLD, "\n\n"+char*27 + " DONE "+ char*27 +"\n")
