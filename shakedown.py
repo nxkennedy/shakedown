@@ -20,7 +20,7 @@ banner = """
             File Integrity Analyzer
 
 Version: 0.0.1
-Author: nxkennedy
+Author: Nolan Kennedy (nxkennedy)
 """
 
 #@TODO what if a file is passed? Or a dir with only one file in it? Or no files?
@@ -32,6 +32,7 @@ def bar():
 
 # colors to choose from
 RED = "\033[1;31m"
+RED_DIM = "\033[2;31m"
 YELLOW = "\033[1;33m"
 BLUE = "\033[1;34m"
 CYAN = "\033[1;36m"
@@ -50,7 +51,7 @@ def write_color(color, string, r=False):
 
 #@TODO this is busted. Need to fix encoding check and make it so that the line number prints with all of the check findings. Also need to add way for findings to be quantified
 def integrity_check(doc):
-    write_color(CYAN, "ANALYZING {0}...".format(doc))
+    write_color(CYAN, "==> Analyzing '{0}'...".format(doc))
     print("---")
 
     try:
@@ -58,26 +59,28 @@ def integrity_check(doc):
             fail = 0 # start our fail counter
 
 
-            ### shell code loop
-            write_color(YELLOW, "{:<43} {:<12}".format("[*] Looking for shellcode...", "[ IN PROGRESS ]"), r=True)
+            #### shell code loop
+            write_color(YELLOW, "{:<46} {:<17}".format("[*] Shellcode Check", "[ IN PROGRESS ]"), r=True)
             time.sleep(2)
             sc_flag = 0
             for line_number, line in enumerate(f, 1):
 
                 shell_code = checks.check_for_shellcode(line)
                 if shell_code:
+
                     if sc_flag < 1:
-                        write_color(RED, "{:<46} {:<17}".format("[!] POSSIBLE SHELLCODE FOUND", "[ FAIL ]"), r=False)
-                    write_color(BLUE, "-> LINE: {0}\n-> CONTENT: {1}".format(line_number, line))
+                        write_color(RED, "{:<46} {:<17}".format("[-] Shellcode Check", "[ FAIL ]"), r=False)
+                        write_color(RED, "{:<46} {:<17}".format("[!] POSSIBLE SHELLCODE FOUND", "[ SEE BELOW ]"), r=False)
+
+                    write_color(RED_DIM, "-> LINE: {0}\n-> CONTENT: {1}".format(line_number, line))
                     sc_flag += 1
                     time.sleep(0.25)
+            if sc_flag == 0:
+                write_color(GREEN, "{:<46} {:<17}".format("[\u2714] Shellcode Check", "[ PASS ]"), r=False)
 
-
-            f.seek(0) # back to the top of the file
-            #if sc_flag
-
-            ### ip loop
-            write_color(YELLOW, "{:<43} {:<12}".format("[*] Looking for IPs...", "[ IN PROGRESS ]"), r=True)
+            f.seek(0) # back to the top of the file because we're about to reiterate over every loop
+            #### ip loop
+            write_color(YELLOW, "{:<43} {:<12}".format("[*] IP Address Check", "[ IN PROGRESS ]"), r=True)
             time.sleep(2)
             ip_flag = 0
             for line_number, line in enumerate(f, 1):
@@ -85,23 +88,24 @@ def integrity_check(doc):
                 if ip:
 
                     if ip_flag < 1:
-                        write_color(RED, "{:<46} {:<17}".format("[!] POSSIBLE IP ADDRESS FOUND", "[ FAIL ]"), r=False)
+                        write_color(RED, "{:<46} {:<17}".format("[-] IP Address Check," "[ FAIL ]"), r=False)
+                        write_color(RED, "{:<46} {:<17}".format("[!] POSSIBLE IP ADDRESS FOUND", "[ SEE BELOW ]"), r=False)
 
-                    write_color(BLUE, "-> LINE: {0}\n-> CONTENT: {1}".format(line_number, line))
+                    write_color(RED_DIM, "-> LINE: {0}\n-> CONTENT: {1}".format(line_number, line))
                     ip_flag += 1
                     time.sleep(0.25)
-                    """
-                    number_of_ips = len(ip)
-                    ip = (', ').join(ip) # makes it a string instead of array
-                    if number_of_ips > 1:
-                        write_color(RED, "\n[!] {0} IP ADDRESSES FOUND \n-> {1}\n-> FILE: {2}\n-> LINE: {3}\n-> CONTENT: {4}".format(number_of_ips, ip, doc, line_number, line))
-                    else:
-                        write_color(RED, "\n[!] IP ADDRESS FOUND \n-> {0}\n-> FILE: {1}\n-> LINE: {2}\n-> CONTENT: {3}".format(ip, doc, line_number, line))
-                    """
+            if ip_flag == 0:
+                write_color(GREEN, "{:<46} {:<17}".format("[\u2714] IP Address Check", "[ PASS ]"), r=False)
 
             print("\n") # Gives us some room
+
+    except UnicodeDecodeError as e:
+        write_color(YELLOW, "\n[!] ERROR: Unable to read {0}".format(doc))
+        write_color(YELLOW, "({0})".format(e))
+
     except Exception as e:
         print("EXCEPTION: " + str(e))
+        pass
 
 
         """
@@ -158,13 +162,13 @@ def analyzer(files):
         for evil in dangerous_ftypes:
             print("-> {0}\n* {1}\n".format(evil[0], evil[1]))
         sys.stdout.write(RESET)
-        time.sleep(1)
+        time.sleep(0.25)
 
     # secondary process
     print("\n[+] IN-DEPTH FILE INTEGRITY TESTING ")
     bar()
     risk = ["[ PASS ]", "[ FAIL ]", "[ UNK ]"]
-    print(" {:<45} {:<12} ".format('File:','Result:'))
+    print(" {:<45} {:<12} ".format('Test:','Result:'))
     print(" {:<45} {:<12} ".format('-----','-------'))
     for f in files:
         # in case we're dealing with lin/win
@@ -179,7 +183,7 @@ def analyzer(files):
         """
         # send the file to the grinder
         integrity_check(f)
-        time.sleep(0.5)
+        time.sleep(0.25)
         """
         # this means the check passed
         #@TODO should print a color based on status of checks above
@@ -249,6 +253,7 @@ def get_target():
 
 if __name__ == "__main__":
     write_color(CYAN, banner +"_"*60 + "\n")
+    time.sleep(0.25)
     get_target()
     char = "="
     print("\n\n"+char*27 + " DONE "+ char*27 +"\n")
