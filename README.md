@@ -35,7 +35,9 @@ Vetting newly downloaded scripts prior to usage in a production environment
     `sudo apt-get install python-magic`
 
 ### Usage
-python shakedown.py <directory_or_file>
+* git clone https://github.com/nxkennedy/shakedown.git
+
+    `python shakedown.py <directory_or_file>`
 
 ### Output
 Findings are displayed in the terminal as well as stored in a csv titled "shakedown-results.csv"
