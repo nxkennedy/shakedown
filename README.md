@@ -40,7 +40,7 @@ Vetting newly downloaded scripts prior to usage in a production environment
     `python shakedown.py <directory_or_file>`
 
 ### Output
-Findings are displayed in the terminal as well as stored in a csv report titled "shakedown-results.csv"
+Findings are displayed in the terminal as well as stored in a csv report titled "shakedown-findings.csv"
 
 ![shakedown terminal output](img/shakedown.png)
 
