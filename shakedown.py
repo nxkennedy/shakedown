@@ -228,7 +228,7 @@ if __name__ == "__main__":
 
     if total_count > 0:
         write_color(RED, "-> Findings: {0}".format(total_count))
-        write_color(BOLD, "-> See 'shakedown-findings.csv' for results")
+        write_color(BOLD, "-> See 'shakedown-findings.csv' for report")
     else:
         write_color(GREEN, "-> Findings: {0}".format(total_count))
 
