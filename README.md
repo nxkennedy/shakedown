@@ -16,7 +16,7 @@
 </table>
 
 ### Description
-Shakedown analyzes files for what may be malicious content. Additionally, it writes findings to csv to assist manual analysis.
+Shakedown analyzes files for potentially malicious content. Additionally, it writes findings to csv to assist manual analysis.
 
 Shakedown currently checks for:
 * IP Addresses
