@@ -1,12 +1,35 @@
-import os
-from collections import Counter
+#!/usr/bin/env python
+#################################################################################################
+# Name: Shakedown
+# Author: Nolan Kennedy (nxkennedy)
+#
+# Description: Script to analyze a directory or file for what may be malicious content. Writes
+#              findings to csv to assist manual analysis.
+#       Currently checks for:
+#                   * IP Addresses
+#                   * URLs
+#                   * Shellcode
+#                   * URL Encoding
+#                   * HTML Encoding
+#
+# Use Case: Vetting newly downloaded scripts for network usage
+#
+# Usage: python shakedown.py <directory_or_file>
+#
+#################################################################################################
+
+
 import sys
+sys.path.insert(0, 'libs') # add path for our checks file
+
+import checks # ours
+from collections import Counter
+import csv
 import glob
 import magic # lol
 import operator
+import os
 import time
-import checks # ours
-import codecs
 
 
 
@@ -17,92 +40,85 @@ banner = """
  _\ \/ _ \/ _ `/  '_/ -_) _  / _ \ |/|/ / _ \\
 /___/_//_/\_,_/_/\_\\\\__/\_,_/\___/__,__/_//_/
 
-            File Integrity Analyzer
+            File Content Analyzer
 
 Version: 0.0.1
 Author: Nolan Kennedy (nxkennedy)
 """
-
-#@TODO what if a file is passed? Or a dir with only one file in it? Or no files?
-
-
 # for our output
 def bar():
     print("="*60)
 
+
 # colors to choose from
 RED = "\033[1;31m"
-RED_DIM = "\033[2;31m"
 YELLOW = "\033[1;33m"
 BLUE = "\033[1;34m"
 CYAN = "\033[1;36m"
 GREEN = "\033[1;32m"
 RESET = "\033[0;0m"
 BOLD = "\033[;1m"
-REVERSE = "\033[;7m"
 
 def write_color(color, string, r=False):
     sys.stdout.write(color)
+
     if r:
         print(string, end="\r")
     else:
         print(string)
+
     sys.stdout.write(RESET)
 
-#@TODO this is busted. Need to fix encoding check and make it so that the line number prints with all of the check findings. Also need to add way for findings to be quantified
+
+def csv_writer(data):
+    with open("shakedown-findings.csv", 'a') as csvfile:
+        csvwriter = csv.writer(csvfile)
+
+        if os.stat("shakedown-findings.csv").st_size == 0: # if file empty
+            csvwriter.writerow(["Check", "Filename", "Line Number", "Content"])
+        else:
+            csvwriter.writerow(data)
+
+total_count = 0
 def integrity_check(doc):
     write_color(BOLD, "==> '{0}'".format(doc))
     print("-" * (len(doc)+6))
+    # provided in our checks module
+    checktypes = {"IP Address": checks.check_for_ips,
+    "URL": checks.check_for_urls,
+    "Shellcode": checks.check_for_encoding_shellcode,
+    "URL Encoding": checks.check_for_encoding_url,
+    "HTML Encoding": checks.check_for_encoding_html,
+    }
     try:
-        with open(doc) as f:
-            #### shell code loop
-            write_color(YELLOW, "{:<46} {:<17}".format("[*] Shellcode Check", "[ IN PROGRESS ]"), r=True)
-            time.sleep(0.5)
-            sc_flag = 0
-            for line_number, line in enumerate(f, 1):
 
-                shell_code = checks.check_for_shellcode(line)
-                if shell_code:
+        with open(doc) as f: # open our doc
+            for check in checktypes: # for each check
+                write_color(YELLOW, "{:<46} {:<17}".format("[*] {0} Check".format(check), "[ IN PROGRESS ]"), r=True)
+                time.sleep(0.10)
+                flag = 0
+                for line_number, line in enumerate(f, 1): # run our check against each line
 
-                    if sc_flag < 1:
-                        write_color(RED, "{:<46} {:<17}".format("[-] Shellcode Check", "[ FAIL ]"), r=False)
-                        write_color(RED, "{:<46} {:<17}".format("[!] POSSIBLE SHELLCODE FOUND", "[ SEE BELOW ]"), r=False)
+                    if checktypes[check](line): # pass the line to our function, and if true
 
-                    print("-> LINE: {0}\n-> CONTENT: {1}".format(line_number, line))
-                    sc_flag += 1
+                        if flag < 1: # if it's the first finding
+                            write_color(RED, "{:<46} {:<17}".format("[-] {0} Check".format(check), "[ FAIL - SEE BELOW ]"), r=False)
 
-            if sc_flag == 0:
-                write_color(GREEN, "{:<46} {:<17}".format("[\u2714] Shellcode Check", "[ PASS ]"), r=False)
+                        print("-> LINE: {0}\n-> CONTENT: {1}".format(line_number, line))
+                        csv_writer([check, doc, line_number, line])
+                        flag += 1
+                        global total_count
+                        total_count += 1
 
+                if flag == 0:
+                    write_color(GREEN, "{:<46} {:<17}".format("[\u2714] {0} Check".format(check), "[ PASS ]"), r=False)
 
-            f.seek(0) # back to the top of the file because we're about to reiterate over every loop
-            #### ip loop
-            write_color(YELLOW, "{:<46} {:<17}".format("[*] IP Address Check", "[ IN PROGRESS ]"), r=True)
-            time.sleep(0.5)
-            ip_flag = 0
-            for line_number, line in enumerate(f, 1):
-                ip = checks.check_for_ips(line)
-                if ip:
-
-                    if ip_flag < 1:
-                        write_color(RED, "{:<46} {:<17}".format("[-] IP Address Check", "[ FAIL ]"), r=False)
-                        write_color(RED, "{:<46} {:<17}".format("[!] POSSIBLE IP ADDRESS FOUND", "[ SEE BELOW ]"), r=False)
-
-                    print("-> LINE: {0}\n-> CONTENT: {1}".format(line_number, line))
-                    ip_flag += 1
-
-            if ip_flag == 0:
-                write_color(GREEN, "{:<46} {:<17}".format("[\u2714] IP Address Check", "[ PASS ]"), r=False)
-
+                f.seek(0) # back to the top of the file because we're about to reiterate over every loop
             print("\n") # Gives us some room
 
     except UnicodeDecodeError as e:
         write_color(YELLOW, "{:<46} {:<17}".format("[!] ERROR: UNABLE TO READ FILE", "[ ERROR ]"))
         write_color(YELLOW, "-> {0}\n\n".format(e))
-
-    except Exception as e:
-        print("EXCEPTION: " + str(e))
-        pass
 
 
 def analyzer(files):
@@ -131,7 +147,7 @@ def analyzer(files):
             t = t[:40] + "..." # truncate output
 
         print("* {:<45} {:<12}".format(t, c))
-    time.sleep(1)
+    time.sleep(0.5)
 
     if len(dangerous_ftypes) > 0:
         sys.stdout.write(YELLOW)
@@ -165,7 +181,6 @@ def process_dir(directory):
     print("\n[+] DIRECTORY STATS FOR '{0}'".format(directory))
     bar()
     print("-> Subdirectories Found: {0}\n-> Files to Analyze: {1}".format((len(folder) - 1 - fcount), (fcount)))
-
     analyzer(files)
 
 
@@ -202,8 +217,19 @@ def get_target():
 
 
 if __name__ == "__main__":
+    start = time.time()
     write_color(CYAN, banner +"_"*60 + "\n")
     time.sleep(0.25)
     get_target()
-    char = "="
-    write_color(BOLD, "\n\n"+char*27 + " DONE "+ char*27 +"\n")
+    finish = time.time()
+    print("\n\n")
+    write_color(BOLD, ('='*27) + " DONE " + ('='*27))
+    write_color(BOLD, "-> Time: {0} sec".format(round(finish - start, 2)))
+
+    if total_count > 0:
+        write_color(RED, "-> Findings: {0}".format(total_count))
+        write_color(BOLD, "-> See 'shakedown-findings.csv' for results")
+    else:
+        write_color(GREEN, "-> Findings: {0}".format(total_count))
+
+    write_color(BOLD, ('='*60) + "\n")

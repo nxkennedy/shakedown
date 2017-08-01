@@ -6,6 +6,7 @@ foo@demo.net	bar.ba@test.co.uk
 www.demo.com	http://foo.co.uk/
 http://regexr.com/foo.html?q=bar
 https://mediatemple.net
+wwww.foo.eu
 10.20.0.2
 68.7.1.254,10.20.0.2
 [255.255.255.255]
@@ -13,3 +14,6 @@ shellcode_hex = "0x440x440x440x440x440x440x440x440x440x440x440x440x44"
 shellcode1 = "\x45\x45\x45\x45\x45\x45\x45\x45\x45\x45\x45\x45\x45\x45"
 shellcode2 = "%x00%x00%x00%x00%x00%x00%x00%x00%x00%x00%x00%x00%x00%x00"
 shellcode3 = "\\x50\\x50\\x50\\x50\\x50\\x50\\x50\\x50\\x50\\x50\\x50"
+urlencoding = "%61%62%63%"
+htmlencoding = "&#x40;&#x23;&#x24;&#x25;&#x5e;&#x26;&#x2a;&#x28;"
+{ |x| fpus << "\xdd" + x.chr }
