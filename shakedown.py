@@ -53,7 +53,6 @@ def bar():
 # colors to choose from
 RED = "\033[1;31m"
 YELLOW = "\033[1;33m"
-BLUE = "\033[1;34m"
 CYAN = "\033[1;36m"
 GREEN = "\033[1;32m"
 RESET = "\033[0;0m"
@@ -78,6 +77,7 @@ def csv_writer(data):
             csvwriter.writerow(["Check", "Filename", "Line Number", "Content"])
         else:
             csvwriter.writerow(data)
+
 
 total_count = 0
 def integrity_check(doc):
