@@ -42,7 +42,7 @@ banner = """
 
             File Content Analyzer
 
-Version: 1.0.1
+Version: 1.1.0
 Author: Nolan Kennedy (nxkennedy)
 """
 # for our output
