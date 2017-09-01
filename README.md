@@ -15,7 +15,7 @@
 </table>
 
 ### Description
-Shakedown analyzes files for potentially malicious content. Additionally, it writes findings to csv to assist manual analysis.
+Shakedown scans uncompiled code for potentially malicious content. Greatly assists vetting complex security tools/frameworks before running them on a company network. (Talking to you, red teams and security engineers)
 
 Shakedown currently checks for:
 * IP Addresses
